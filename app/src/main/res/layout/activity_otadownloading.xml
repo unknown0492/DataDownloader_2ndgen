@@ -1,0 +1,64 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    tools:context="com.excel.datadownloader.secondgen.OTADownloadingActivity">
+
+    <TextView
+        android:text="Your TV is Upgrading\nApologies for the inconvenience caused\nThis won't take a lot of time !"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:textSize="30sp"
+        android:id="@+id/tv_message"
+        />
+
+    <LinearLayout
+        android:id="@+id/ll_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:layout_below="@+id/tv_message">
+
+        <TextView
+            android:id="@+id/tv_progress"
+            android:text="0 MB"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="23sp" />
+
+        <TextView
+            android:text="Of"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tv_message"
+            android:textSize="23sp" />
+
+        <TextView
+            android:id="@+id/tv_total_size"
+            android:text=""
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="23sp" />
+
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_download_complete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/ll_progress"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        android:gravity="center"
+        android:text="Download Completed\nYour TV Will now Reboot and Upgrade !"
+        android:textSize="30sp" />
+
+
+</RelativeLayout>

@@ -28,17 +28,31 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.excel.datadownloader.secondgen.Receiver">
+        <receiver android:name=".Receiver">
             <intent-filter>
                 <action android:name="get_wallpapers" />
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
                 <action android:name="connectivity_changed" />
                 <action android:name="get_hotel_logo" />
+                <action android:name="get_tv_channels_file" />
+                <action android:name="download_preinstall_apps" />
+                <action android:name="get_ota_info" />
+                <action android:name="run_ota_upgrade" />
+                <action android:name="postpone_ota_upgrade" />
             </intent-filter>
         </receiver>
 
         <service android:name="com.excel.datadownloader.services.DownloadWallpaperService" />
         <service android:name="com.excel.datadownloader.services.DownloadHotelLogoService" />
+        <service android:name="com.excel.datadownloader.services.DownloadTvChannelsService" />
+        <service android:name="com.excel.datadownloader.services.DownloadPreinstallApks" />
+        <service android:name="com.excel.datadownloader.services.DownloadOTAService"
+             />
+
+        <activity
+            android:name=".OTADownloadingActivity"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Wallpaper.NoTitleBar.Fullscreen"></activity>
     </application>
 
 </manifest>

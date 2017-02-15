@@ -16,8 +16,9 @@ import android.util.Log;
 import com.excel.configuration.ConfigurationReader;
 import com.excel.excelclasslibrary.RetryCounter;
 import com.excel.excelclasslibrary.UtilNetwork;
+import com.excel.excelclasslibrary.UtilShell;
 import com.excel.excelclasslibrary.UtilURL;
-import com.excel.util.MD5;
+import com.excel.util.Compress;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,9 +29,9 @@ import java.io.File;
  * Created by Sohail on 04-11-2016.
  */
 
-public class DownloadHotelLogoService extends Service {
+public class DownloadTvChannelsService extends Service {
 
-    final static String TAG = "DownloadHotelLogo";
+    final static String TAG = "DownloadTvChannels";
     Context context;
     RetryCounter retryCounter;
     DownloadManager downloadManager;
@@ -45,29 +46,29 @@ public class DownloadHotelLogoService extends Service {
 
     @Override
     public int onStartCommand( Intent intent, int flags, int startId ) {
-        Log.d( TAG, "DownloadHotelLogoService started" );
+        Log.d( TAG, "DownloadTvChannelsService started" );
         context = this;
-        retryCounter = new RetryCounter( "logo_download_count" );
+        retryCounter = new RetryCounter( "tv_download_count" );
         registerDownloadCompleteReceiver();
 
-        downloadHotelLogo();
+        downloadTvChannels();
 
         return START_STICKY;
     }
 
-    private void downloadHotelLogo(){
+    private void downloadTvChannels(){
         new Thread(new Runnable(){
 
             @Override
             public void run(){
                 String s = UtilNetwork.makeRequestForData( UtilURL.getWebserviceURL(), "POST",
                         UtilURL.getURLParamsFromPairs( new String[][]{
-                                { "what_do_you_want", "get_hotel_logo" },
+                                { "what_do_you_want", "get_tv_channels_file" },
                                 { "mac_address", UtilNetwork.getMacAddress( context ) }
                         } ));
 
                 if( s == null ){
-                    Log.d( TAG, "Failed to retrieve Logo" );
+                    Log.d( TAG, "Failed to retrieve Tv Channels file" );
                     setRetryTimer();
                     return;
                 }
@@ -89,26 +90,14 @@ public class DownloadHotelLogoService extends Service {
 
             if( type.equals( "error" ) ){
                 Log.e( TAG, "Error : "+info );
-
-                //setRetryTimer();  // because, error means that Hotel Logo Display has been TURNED OFF for this CMS
-                Intent intent = new Intent( "receive_get_hotel_logo" );
-                intent.putExtra( "hasHotelLogoDisplay", false );
-                context.sendBroadcast( intent );
+                setRetryTimer();
                 return;
             }
             else if( type.equals( "success" ) ){
                 jsonObject = new JSONObject( info );
-
-                String show_logo = jsonObject.getString( "show_logo" );
-                if( show_logo.equals( "0" ) ){
-                    Log.e( TAG, "Error : Hotel Logo has not been configured yet for this box !" );
-                    setRetryTimer();
-                    return;
-                }
-                else{
-                    verifyAndDownloadHotelLogo( jsonObject.getString( "md5" ), jsonObject.getString( "logo_path" ) );
-                }
-
+                String file_path = jsonObject.getString( "file_path" );
+                String md5 = jsonObject.getString( "md5" );
+                verifyAndDownloadTvChannels( md5, file_path );
             }
 
             retryCounter.reset();
@@ -119,46 +108,43 @@ public class DownloadHotelLogoService extends Service {
         }
     }
 
-    private void verifyAndDownloadHotelLogo( String md5, String logo_path ){
-        String file_name = "hotel_logo.png";
+    private void verifyAndDownloadTvChannels( String md5, String file_path ){
+        String file_name = "tv_channels.zip";
         ConfigurationReader configurationReader = ConfigurationReader.getInstance();
-        File path = new File( configurationReader.getHotelLogoDirectoryPath() );
-        Log.d( TAG, "Hotel Logo path : "+path.getAbsolutePath() );
+        File path = new File( configurationReader.getTvChannelsDirectoryPath() );
+        Log.d( TAG, "TV Channels : "+path.getAbsolutePath() );
         downloadManager = (DownloadManager) getSystemService( Context.DOWNLOAD_SERVICE );
 
         if( ! path.exists() ){
             path.mkdirs();
         }
 
-        File hotel_logo = new File( path + File.separator + file_name );
+        File tv_channels_file = new File( path + File.separator + file_name );
 
-        if( ! hotel_logo.exists() ){
-            // Download the Logo and save it with the File Name
-            downloadLogo( file_name, logo_path, hotel_logo.getAbsolutePath() );
+        if( ! tv_channels_file.exists() ){
+            // Download the TV channels File and save it with the File Name
+            //downloadAndRestoreNewZip( file_name, file_path, tv_channels_file.getAbsolutePath() );
+            downloadTvChannelsFile( file_name, file_path, tv_channels_file.getAbsolutePath() );
         }
         else{   // If the wallpaper with the File Name exist, then check its MD5
             try {
-                if ( md5.equals( MD5.getMD5Checksum( hotel_logo ) ) ){
+                /*if ( md5.equals( MD5.getMD5Checksum( tv_channels_file ) ) ){
                     // If md5 is the same, no need to download the wallpaper again, ignore and continue
-                    Log.e( TAG, "Ignoring logo download : "+logo_path );
-
-                    Intent intent = new Intent( "receive_get_hotel_logo" );
-                    intent.putExtra( "hasHotelLogoDisplay", true );
-                    context.sendBroadcast( intent );    // Sending this broadcast to the Launcher
-
+                    Log.e( TAG, "Ignoring tv channels file download : "+file_path );
+                    // restoreZIP();
                     return;
-                }
+                }*/
                 // Delete the existing One
-                hotel_logo.delete();
-                // Download the wallpaper and save it with the File Name
-                downloadLogo( file_name, logo_path, hotel_logo.getAbsolutePath() );
+                tv_channels_file.delete();
+                // Download the TV channels File and save it with the File Name
+                downloadTvChannelsFile( file_name, file_path, tv_channels_file.getAbsolutePath() );
             }
             catch ( Exception e ){
                 e.printStackTrace();
                 // Delete the existing One
-                hotel_logo.delete();
-                // Download the wallpaper and save it with the File Name
-                downloadLogo( file_name, logo_path, hotel_logo.getAbsolutePath() );
+                tv_channels_file.delete();
+                // Download the TV channels File and save it with the File Name
+                downloadTvChannelsFile( file_name, file_path, tv_channels_file.getAbsolutePath() );
             }
         }
 
@@ -166,14 +152,57 @@ public class DownloadHotelLogoService extends Service {
 
 
 
-    private void downloadLogo( String file_name, String file_path, String file_save_path ){
-        Log.d( TAG, "Downloading hotel logo : "+file_name );
+    private void downloadTvChannelsFile( String file_name, String file_path, String file_save_path ){
+        Log.d( TAG, "Downloading TV Channels file : "+file_name );
         Uri uri = Uri.parse( UtilURL.getCMSRootPath() + file_path );
         DownloadManager.Request request = new DownloadManager.Request( uri );
         request.setNotificationVisibility( DownloadManager.Request.VISIBILITY_HIDDEN );
         //request.setDestinationInExternalFilesDir( context, getExternalFilesDir( "Launcher" ).getAbsolutePath(), file_name );
         request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
         downloadReference = downloadManager.enqueue( request );
+    }
+
+    /*private void downloadAndRestoreNewZip( String file_name, String file_path, String file_save_path ){
+        downloadTvChannelsFile( file_name, file_path, file_save_path );
+    }*/
+
+    private void restoreZIP(){
+        Log.d( TAG, "restoreZIP()" );
+        ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+
+        String pid = UtilShell.executeShellCommandWithOp( "pidof com.android.dtv" ).trim();
+        Log.d( TAG, "pid :"+pid+":" );
+
+        // 1. Kill App
+        UtilShell.executeShellCommandWithOp( "kill "+pid );
+
+        // 2. Delete Existing Data
+        UtilShell.executeShellCommandWithOp( "chmod -R 777 /data/hdtv" );
+        UtilShell.executeShellCommandWithOp( "rm -r /data/hdtv/*" );
+        //UtilShell.executeShellCommandWithOp( "mkdir /data/hdtv" );
+
+        // 3. Kill App
+        pid = UtilShell.executeShellCommandWithOp( "pidof com.android.dtv" ).trim();
+        UtilShell.executeShellCommandWithOp( "kill "+pid );
+
+        // 4. Unzip tv_channels.zip
+        Compress.unZipIt( configurationReader.getTvChannelsDirectoryPath() + File.separator + "tv_channels.zip",
+                configurationReader.getTvChannelsDirectoryPath() );
+        Log.d( TAG, "tv_channels.zip extracted successfully" );
+
+        // 5. Copy Extracted content into the /data/hdtv
+        UtilShell.executeShellCommandWithOp( "chmod -R 777 /data/hdtv",
+                //"rm -r /data/hdtv",
+                "cp -r /mnt/sdcard/appstv_data/tv_channels/backup/hdtv/* /data/hdtv",
+                "chmod -R 777 /data/hdtv" );
+
+        UtilShell.executeShellCommandWithOp( "setprop is_tv_ch_restored 1" );
+        Log.i( TAG, "setprop is_tv_ch_restored 1" );
+
+        // 6. Kill App
+        pid = UtilShell.executeShellCommandWithOp( "pidof com.android.dtv" ).trim();
+        UtilShell.executeShellCommandWithOp( "kill "+pid );
+
     }
 
     private void  registerDownloadCompleteReceiver(){
@@ -198,9 +227,7 @@ public class DownloadHotelLogoService extends Service {
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
 
-                                Intent in = new Intent( "receive_get_hotel_logo" );
-                                intent.putExtra( "hasHotelLogoDisplay", true );
-                                context.sendBroadcast( in );    // Sending this broadcast to the Launcher
+                                //restoreZIP();
 
                                 Log.i( TAG, savedFilePath + " downloaded successfully !" );
                                 break;
@@ -237,8 +264,8 @@ public class DownloadHotelLogoService extends Service {
 
             @Override
             public void run() {
-                Log.d( TAG, "downloading hotel logo after "+(time/1000)+" seconds !" );
-                downloadHotelLogo();
+                Log.d( TAG, "downloading Tv channels file after "+(time/1000)+" seconds !" );
+                downloadTvChannels();
 
             }
 
