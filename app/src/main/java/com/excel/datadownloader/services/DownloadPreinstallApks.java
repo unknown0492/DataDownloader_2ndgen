@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
@@ -43,6 +45,7 @@ public class DownloadPreinstallApks extends Service {
     int counter = 0;
     ConfigurationReader configurationReader;
     Intent inn;
+    String log = "";
 
     @Override
     public IBinder onBind( Intent intent ) {
@@ -96,6 +99,7 @@ public class DownloadPreinstallApks extends Service {
     }
 
     PreinstallApps papps[];
+    PackageInfo pifo;
     private void processResult( String json ){
         papps = PreinstallApps.getPreinstallApps();
         for( int i = 0 ; i < papps.length ; i++ ){
@@ -103,6 +107,7 @@ public class DownloadPreinstallApks extends Service {
         }
         downloadReferences = new Vector<Long>();
         downloadManager = (DownloadManager) getSystemService( Context.DOWNLOAD_SERVICE );
+
 
         // Create preinstall Directory if does not exist
         File file = new File( configurationReader.getPreinstallApksDirectoryPath( false ) );
@@ -121,9 +126,6 @@ public class DownloadPreinstallApks extends Service {
                 verifyAndDownloadApks( jsonObject, papps[ i ] );
                 //Log.d( TAG, papps[ i ].getPackageName() + " - " + jsonObject.getString( "apk_url" ) );
             }
-
-
-
         }
         catch( Exception e ){
             e.printStackTrace();
@@ -187,6 +189,7 @@ public class DownloadPreinstallApks extends Service {
                 // Download the New Apk
                 try {
                     Log.i( TAG, "This seems to be a new app : " + package_name.getAbsolutePath() );
+                    log += "New Apk on the CMS : "+package_name+"\n";
                     downloadSingleApk( pa.getPackageName() + ".apk", jsonObject.getString( "apk_url" ), package_name_sdcard.getAbsolutePath() );
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -194,6 +197,8 @@ public class DownloadPreinstallApks extends Service {
 
             }
         }
+
+
 
         if( need_old_md5 ){
             try {
@@ -209,16 +214,38 @@ public class DownloadPreinstallApks extends Service {
                 if( is_package_from_sdcard ){
                     Log.e( TAG, package_name.getAbsolutePath() + " Package Deleted !" );
                     package_name.delete();
+                    log += package_name + " deleted \n";
                 }
                 // Download the New Apk
                 try {
                     downloadSingleApk( pa.getPackageName() + ".apk", jsonObject.getString( "apk_url" ), package_name_sdcard.getAbsolutePath() );
+
                 } catch ( JSONException e ) {
                     e.printStackTrace();
                 }
             }
             else{
                 Log.i( TAG, "No need to download package : " + package_name.getAbsolutePath() );
+                log += package_name + " is already up to date. No need to download it again !";
+                if( ! ( new File( "/data/data/"+pa.getPackageName() ).exists() ) ) {
+                    installApk( package_name.getAbsolutePath() );
+                }
+                String base_md5 = "";
+                try {
+                    pifo = (PackageInfo) getPackageManager().getPackageInfo(pa.getPackageName(), PackageManager.GET_META_DATA);
+                    base_md5 = MD5.getMD5Checksum( new File( pifo.applicationInfo.sourceDir ) ).trim();
+                    //Log.d( TAG, "AAAA : "+base_md5);
+                    Log.d( TAG, "base-md5 : "+base_md5);
+                }
+                catch ( Exception e ){
+                    e.printStackTrace();
+                }
+
+                if( ! base_md5.equals( new_md5 ) ) {
+                    uninstallApk(package_name.getAbsolutePath());
+                    Log.d(TAG, "Force Installing !");
+                    installApk(package_name.getAbsolutePath());
+                }
             }
         }
 
@@ -365,7 +392,7 @@ public class DownloadPreinstallApks extends Service {
         request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
         //downloadReferences[ counter++ ] = downloadManager.enqueue( request );
         long reff = Long.valueOf( downloadManager.enqueue( request ) );
-        Log.i( TAG, "Download ref : " + reff );
+        Log.i( TAG, "Download ref for "+ file_name +" is : " + reff );
         downloadReferences.add( reff );
     }
 
@@ -374,9 +401,10 @@ public class DownloadPreinstallApks extends Service {
         receiverDownloadComplete = new BroadcastReceiver() {
 
             @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.i( TAG, "inside onReceive()" );
+            public void onReceive( Context context, Intent intent ) {
+                Log.i( TAG, "inside onReceive() action : "+intent.getAction() );
                 long reference = intent.getLongExtra( DownloadManager.EXTRA_DOWNLOAD_ID, -1 );
+                Log.i( TAG, "current reference : " + reference );
                 // String extraID = DownloadManager.EXTRA_NOTIFICATION_CLICK_DOWNLOAD_IDS;
                 // long[] references = intent.getLongArrayExtra( extraID );
                 for( int i = 0 ; i < downloadReferences.size() ; i++ ){
@@ -397,6 +425,7 @@ public class DownloadPreinstallApks extends Service {
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
                                 Log.i( TAG, savedFilePath + " downloaded successfully !" );
+                                uninstallApk( savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() ) );
                                 installApk( savedFilePath );
                                 break;
                             case DownloadManager.STATUS_FAILED:
@@ -425,7 +454,14 @@ public class DownloadPreinstallApks extends Service {
     public void installApk( String file_path ){
         Log.d( TAG, "Installing apk : " + file_path );
         String status = UtilShell.executeShellCommandWithOp( "pm install -r " + file_path );
-        Log.i( TAG, "Install status : " + status );
+        //log += "Installing apk : "+ file_path + " , status : " +status+ " \n";
+        Log.i( TAG, "Installing apk : "+ file_path + " , status : " +status );
+    }
+
+    public void uninstallApk( String package_name ){
+        Log.d( TAG, "UnInstalling apk : " + package_name );
+        String status = UtilShell.executeShellCommandWithOp( "pm uninstall " + package_name );
+        Log.i( TAG, "UnInstall status : " + status );
     }
 
     private void setRetryTimer(){

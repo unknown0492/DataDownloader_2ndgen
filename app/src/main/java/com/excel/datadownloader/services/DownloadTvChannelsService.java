@@ -51,6 +51,13 @@ public class DownloadTvChannelsService extends Service {
         retryCounter = new RetryCounter( "tv_download_count" );
         registerDownloadCompleteReceiver();
 
+        Log.d( TAG, "Starting....................." );
+
+
+        // Intent LaunchIntent = getPackageManager().getLaunchIntentForPackage("com.android.providers.downloads.ui");
+        //startActivity(LaunchIntent);
+
+
         downloadTvChannels();
 
         return START_STICKY;
@@ -134,8 +141,10 @@ public class DownloadTvChannelsService extends Service {
                     // restoreZIP();
                     return;
                 }*/
+
                 // Delete the existing One
                 tv_channels_file.delete();
+
                 // Download the TV channels File and save it with the File Name
                 downloadTvChannelsFile( file_name, file_path, tv_channels_file.getAbsolutePath() );
             }
@@ -160,6 +169,8 @@ public class DownloadTvChannelsService extends Service {
         //request.setDestinationInExternalFilesDir( context, getExternalFilesDir( "Launcher" ).getAbsolutePath(), file_name );
         request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
         downloadReference = downloadManager.enqueue( request );
+
+
     }
 
     /*private void downloadAndRestoreNewZip( String file_name, String file_path, String file_save_path ){
@@ -206,11 +217,12 @@ public class DownloadTvChannelsService extends Service {
     }
 
     private void  registerDownloadCompleteReceiver(){
+
         IntentFilter intentFilter = new IntentFilter( DownloadManager.ACTION_DOWNLOAD_COMPLETE );
         receiverDownloadComplete = new BroadcastReceiver() {
 
             @Override
-            public void onReceive(Context context, Intent intent) {
+            public void onReceive( Context context, Intent intent ) {
                 Log.d( TAG, "registerDownloadCompleteReceiver() onReceive" );
                 long reference = intent.getLongExtra( DownloadManager.EXTRA_DOWNLOAD_ID, -1 );
                 long ref = downloadReference;

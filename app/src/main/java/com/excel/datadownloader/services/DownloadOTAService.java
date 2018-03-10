@@ -1,7 +1,6 @@
 package com.excel.datadownloader.services;
 
 import android.app.DownloadManager;
-import android.app.Notification;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -50,6 +49,8 @@ public class DownloadOTAService extends Service {
     int file_size = -1;
     boolean downloading = true;
     File ota_update_zip_file;
+    Handler handler = new Handler( Looper.getMainLooper() );
+    double total;
 
     // Script
     public static final String FIRMWARE_UPDATE_SCRIPT			= 	"echo 'boot-recovery ' > /cache/recovery/command\n" +
@@ -65,14 +66,6 @@ public class DownloadOTAService extends Service {
     public int onStartCommand( Intent intent, int flags, int startId ) {
         Log.d( TAG, "DownloadOTAService started" );
         context = this;
-        int myID = 1234;
-
-        //This constructor is deprecated. Use Notification.Builder instead
-        Notification.Builder notice = new Notification.Builder( context ).setContentTitle( "Test" );
-
-        startForeground( myID, notice.getNotification() );
-
-
         configurationReader = ConfigurationReader.getInstance();
         retryCounter = new RetryCounter( "ota_download_count" );
         registerDownloadCompleteReceiver();
@@ -133,6 +126,7 @@ public class DownloadOTAService extends Service {
                     String firmware_name = configurationReader.getFirmwareName().trim();
                     ota_type = jsonObject.getString( "ota_type" );
                     file_size = jsonObject.getInt( "file_size" );
+                    total    = Double.parseDouble( String.format( "%.2f", (double)file_size/(double)1024/(double)1024 ) );
 
                     if( firmware_name.equals( new_firmware_name ) ){
                         Log.i( TAG, "No need to OTA, same firmware already exist on the box !" );
@@ -145,8 +139,6 @@ public class DownloadOTAService extends Service {
                     Log.e( TAG, "??? : " + info );
                     return;
                 }
-
-
             }
 
             retryCounter.reset();
@@ -211,19 +203,15 @@ public class DownloadOTAService extends Service {
 
     }
 
-    Handler handler = new Handler( Looper.getMainLooper() );
+
 
     private void validateOTATypeAndStartOTA(){
         Log.d( TAG, "OTA type : " + ota_type );
 
         if( ota_type.equals( "regular" ) ){
             // Show the Downloading Activity
-            //Intent inn = new Intent( context, OTADownloadingActivity.class );
             Intent inn = new Intent( "show_ota_downloading" );
-            //inn.addFlags( Intent.FLAG_ACTIVITY_NEW_TASK );
-            //inn.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            //inn.putExtra( "ota_zip_file_path", file_save_path );
-            inn.putExtra( "file_size", file_size );
+            //inn.putExtra( "file_size", file_size );
             sendBroadcast( inn );
             Log.d( TAG, "Show OTA Downloading Activity !" );
             //startActivity( inn );
@@ -231,14 +219,14 @@ public class DownloadOTAService extends Service {
             sendDownloadProgressToActivity();
 
         }
-        else if( ota_type.equals( "silent" ) ){
+        else if( ota_type.equals( "silent" ) || ota_type.equals( "silent-prompt" )  ){
             Log.d( TAG, "Silent OTA Downloading Started" );
             //showDownloadProgressInLogs();
             sendDownloadProgressToActivity();
         }
         else if( ota_type.equals( "regular-prompt" ) ){
             Intent inn = new Intent( "show_ota_downloading" );
-            inn.putExtra( "file_size", file_size );
+            //inn.putExtra( "file_size", total );
             sendBroadcast( inn );
             Log.d( TAG, "Show OTA Downloading Activity - regular prompt!" );
 
@@ -248,51 +236,7 @@ public class DownloadOTAService extends Service {
 
     private void sendDownloadProgressToActivity(){
 
-        /*handler.post(new Runnable() {
-            @Override
-            public void run() {
-                double progress = 0.0;
-                while( downloading ){
-                    DownloadManager.Query q = new DownloadManager.Query();
-                    q.setFilterById( downloadReference );
-                    Cursor cursor = downloadManager.query( q );
-                    cursor.moveToFirst();
 
-                    int bytes_downloaded = cursor.getInt( cursor
-                            .getColumnIndex( DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR ) );
-                    //int bytes_total = cursor.getInt( cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES ) );
-                    try {
-                        progress = ((double)bytes_downloaded/(double)file_size)*100;
-                        Log.d( TAG, String.format( "Total %d.02f, Downloaded %d.02f", file_size, bytes_downloaded ) );
-                    }
-                    catch ( Exception e ){
-                        e.printStackTrace();
-                    }
-
-                    Intent in = new Intent( "ota_progress_update" );
-                    in.putExtra( "progress", progress );
-                    //in.putExtra( "md5", new_firmware_md5 );
-                    //LocalBroadcastManager.getInstance( context ).sendBroadcast( in );
-                    context.sendBroadcast( in );
-
-                    //CustomItems.showCustomToast( getBaseContext(), "success", "Downloading Update " +progress+"%", 2000 );
-                   // Toast.makeText( getBaseContext(), "Downloading Update " +progress+"%", Toast.LENGTH_SHORT ).show();
-                    Log.d( TAG, String.format( "Downloading Update : %.02f", progress )+"%" );
-
-                    if( progress == 100.0 ){
-                        downloading = false;
-                        //break;
-                    }
-
-                    try {
-                        Thread.sleep( 2000 );
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }
-        });*/
 
         new AsyncTask< Void, Void, Void >(){
 
@@ -325,23 +269,16 @@ public class DownloadOTAService extends Service {
                                     if( ota_type.equals( "regular" ) || ota_type.equals( "regular-prompt" ) ) {
                                         Intent in = new Intent( "ota_progress_update" );
                                         in.putExtra( "progress", progress );
-                                        in.putExtra( "file_size", file_size );
+                                        in.putExtra( "file_size", total );
                                         context.sendBroadcast( in );
                                     }
-                                    /*else if( ota_type.equals( "silent" ) ){
-                                        // Nothing special to do here
-                                    }*/
-
-
-                                    //CustomItems.showCustomToast( getBaseContext(), "success", "Downloading Update " +progress+"%", 2000 );
-                                   // Toast.makeText( getBaseContext(), "Downloading Update " +progress+"%", Toast.LENGTH_SHORT ).show();
                                     Log.d( TAG, "Downloading Update " +progress+"%" );
 
                                     if( progress == 100.0 )
                                         downloading = false;
 
                                     try {
-                                        Thread.sleep( 2000 );
+                                        Thread.sleep( 1000 );
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -354,60 +291,6 @@ public class DownloadOTAService extends Service {
 
 
                         }
-                }).start();
-                return null;
-            }
-
-        }.execute();
-    }
-
-    private void showDownloadProgressInLogs(){
-        new AsyncTask< Void, Void, Void >(){
-
-            @Override
-            protected Void doInBackground(Void... params) {
-                new Thread(new Runnable() {
-                    public void run() {
-
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                double progress = 0;
-                                while( downloading ){
-                                    DownloadManager.Query q = new DownloadManager.Query();
-                                    q.setFilterById( downloadReference );
-                                    Cursor cursor = downloadManager.query( q );
-                                    cursor.moveToFirst();
-
-                                    int bytes_downloaded = cursor.getInt( cursor
-                                            .getColumnIndex( DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR ) );
-                                    //int bytes_total = cursor.getInt( cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES ) );
-                                    try {
-                                        progress = Double.parseDouble( String.format( "%.2f",((double)bytes_downloaded/(double)file_size)*100 ) );
-                                    }
-                                    catch ( Exception e ){
-                                        e.printStackTrace();
-                                    }
-
-                                   Log.d( TAG, "Downloading Update " +progress+"%" );
-
-                                    if( progress == 100.0 )
-                                        downloading = false;
-
-                                    try {
-                                        Thread.sleep( 2000 );
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-
-                            }
-                        });
-
-
-
-
-                    }
                 }).start();
                 return null;
             }
@@ -435,9 +318,11 @@ public class DownloadOTAService extends Service {
                         String savedFilePath = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
                         savedFilePath = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
                         switch( status ){
+
                             case DownloadManager.STATUS_SUCCESSFUL:
                                 Log.i( TAG, savedFilePath + " downloaded successfully !" );
                                 downloading = false;
+                                downloadReference = -1;
                                 verifyDownload();
                                 break;
                             case DownloadManager.STATUS_FAILED:
@@ -454,8 +339,8 @@ public class DownloadOTAService extends Service {
                                 Log.d( TAG, savedFilePath + " downloading !" );
                                 break;
 
-
                         }
+
 
                     }
 
@@ -497,6 +382,7 @@ public class DownloadOTAService extends Service {
             else{
                 //LocalBroadcastManager.getInstance( context ).sendBroadcast( new Intent( "ota_download_complete" ) );
 
+
                 if( ota_type.equals( "regular" ) ) {
                     Intent in = new Intent( "ota_download_complete" );
                     in.putExtra( "show_prompt", false );
@@ -506,15 +392,16 @@ public class DownloadOTAService extends Service {
                 else if( ota_type.equals( "silent" ) ){
                     copyToCacheAndUpgrade();
                 }
-                else if( ota_type.equals( "" ) ){
-
-                }
                 else if( ota_type.equals( "regular-prompt" ) ){
                     Intent in = new Intent( "ota_download_complete" );
                     in.putExtra( "show_prompt", true );
                     context.sendBroadcast( in );
                 }
-
+                else if( ota_type.equals( "silent-prompt" ) ){
+                    Intent in = new Intent( "ota_download_complete" );
+                    in.putExtra( "show_prompt", true );
+                    context.sendBroadcast( in );
+                }
 
             }
         } catch ( Exception e ) {
@@ -586,7 +473,7 @@ public class DownloadOTAService extends Service {
             }
             else{
                 Log.d( TAG, "All Good ! Box is Rebooting Now :)" );
-                //UtilShell.executeShellCommandWithOp( "sh /cache/up.sh" );
+                UtilShell.executeShellCommandWithOp( "sh /cache/up.sh" );
             }
         } catch ( Exception e ) {
             e.printStackTrace();

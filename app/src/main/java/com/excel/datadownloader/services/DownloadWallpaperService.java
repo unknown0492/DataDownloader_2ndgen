@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.excel.configuration.ConfigurationReader;
+import com.excel.configuration.DigitalSignageManager;
 import com.excel.excelclasslibrary.RetryCounter;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilURL;
@@ -94,18 +95,20 @@ public class DownloadWallpaperService extends Service {
             }
             else if( type.equals( "success" ) ){
                 jsonArray = new JSONArray( info );
+                DigitalSignageManager.writeDigitalSignageConfig( jsonArray.toString() );
                 WallpaperInfo wpi[] = new WallpaperInfo[ jsonArray.length() ];
                 downloadReferences = new long[ jsonArray.length() ];
+                counter = 0;
                 for( int i = 0 ; i < jsonArray.length(); i++ ){
                     jsonObject = jsonArray.getJSONObject( i );
                     wpi[ i ] = new WallpaperInfo( jsonObject.getString( "file_name" ),
                             jsonObject.getString( "file_path" ),
-                            jsonObject.getString( "md5" ) );
+                            jsonObject.getString( "md5" ),
+                            jsonObject.getInt( "sequence" ) );
                     // Log.d( TAG, wpi[ i ].getFileName() + " - " + wpi[ i ].getFilePath() + " - " +wpi[ i ].getMD5() );
                 }
 
                 verifyAndDownloadWallpapers( wpi );
-
             }
 
             retryCounter.reset();
@@ -120,6 +123,7 @@ public class DownloadWallpaperService extends Service {
         String md5 = "";
         String file_name = "";
         String file_path = "";
+        int sequence = -1;
         ConfigurationReader configurationReader = ConfigurationReader.getInstance();
         File path = new File( configurationReader.getDigitalSignageDirectoryPath() );
         Log.d( TAG, "digital signage path : "+path.getAbsolutePath() );
@@ -136,6 +140,8 @@ public class DownloadWallpaperService extends Service {
             md5 = wpi[ i ].getMD5();
             file_name = wpi[ i ].getFileName();
             file_path = wpi[ i ].getFilePath();
+            sequence = wpi[ i ].getSequence();
+
 
             File wallpaper = new File( path + File.separator + file_name );
 
@@ -195,6 +201,9 @@ public class DownloadWallpaperService extends Service {
                 long reference = intent.getLongExtra( DownloadManager.EXTRA_DOWNLOAD_ID, -1 );
                 // String extraID = DownloadManager.EXTRA_NOTIFICATION_CLICK_DOWNLOAD_IDS;
                 // long[] references = intent.getLongArrayExtra( extraID );
+                if( downloadReferences == null )
+                    return;
+
                 for( int i = 0 ; i < downloadReferences.length ; i++ ){
                     long ref = downloadReferences [ i ];
                 //for( long ref : downloadReferences ){
@@ -299,11 +308,13 @@ public class DownloadWallpaperService extends Service {
         private String file_name;
         private String file_path;
         private String md5;
+        private int sequence;
 
-        public WallpaperInfo( String file_name, String file_path, String md5 ){
+        public WallpaperInfo( String file_name, String file_path, String md5, int sequence ){
             this.setFileName(file_name);
             this.setFilePath(file_path);
             this.setMD5(md5);
+            this.setSequence(sequence);
         }
 
 
@@ -329,6 +340,14 @@ public class DownloadWallpaperService extends Service {
 
         public void setMD5(String md5) {
             this.md5 = md5;
+        }
+
+        public int getSequence() {
+            return sequence;
+        }
+
+        public void setSequence(int sequence) {
+            this.sequence = sequence;
         }
     }
 }

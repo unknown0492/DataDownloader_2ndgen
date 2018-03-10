@@ -5,29 +5,79 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Log;
 
+import com.excel.configuration.ConfigurationReader;
 import com.excel.datadownloader.services.DownloadHotelLogoService;
 import com.excel.datadownloader.services.DownloadOTAService;
 import com.excel.datadownloader.services.DownloadPreinstallApks;
 import com.excel.datadownloader.services.DownloadTvChannelsService;
 import com.excel.datadownloader.services.DownloadWallpaperService;
+import com.excel.excelclasslibrary.UtilSharedPreferences;
 import com.excel.excelclasslibrary.UtilShell;
 
+import static com.excel.util.Constants.IS_PERMISSION_GRANTED;
+import static com.excel.util.Constants.PERMISSION_GRANTED_NO;
+import static com.excel.util.Constants.PERMISSION_SPFS;
 
 public class Receiver extends BroadcastReceiver {
 
     final static String TAG = "Receiver";
+    Context main_context = null;
+    ConfigurationReader configurationReader;
+    SharedPreferences spfs;
 
     @Override
     public void onReceive( Context context, Intent intent ) {
         String action = intent.getAction();
         Log.d( TAG, "action : " + action );
 
+        main_context = context;
+
+        MainActivity ma = new MainActivity();
+
+        /*// Check permissions before executing any broadcast, this is to prevent the app from hanging
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
+            if ( ma.checkPermissions() ) {
+                // permissions  granted.
+                Log.d( TAG, "All permissions have been granted, just proceed !" );
+            }
+            else{
+                startDataDownloader( context );
+                return;
+            }
+        }*/
+
+        // Check permissions before executing any broadcast, this is to prevent the app from hanging
+        spfs = (SharedPreferences) UtilSharedPreferences.createSharedPreference( context, PERMISSION_SPFS );
+        String is_permission_granted = UtilSharedPreferences.getSharedPreference( spfs, IS_PERMISSION_GRANTED, PERMISSION_GRANTED_NO ).toString().trim();
+        Log.d( TAG, "Permission granted : "+is_permission_granted );
+
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
+            if( is_permission_granted.equals( "yes" ) ){
+                Log.d( TAG, "All permissions have been granted, just proceed !" );
+            }
+            else{
+                startDataDownloader( context );
+                return;
+            }
+        }
+
+        configurationReader = ConfigurationReader.reInstantiate();
+
         if( action.equals( "android.net.conn.CONNECTIVITY_CHANGE" ) || action.equals( "connectivity_changed" ) ){
 
             // 1. First time in order to receive broadcasts, the app should be started at least once
             startDataDownloader( context );
+
+            // Execute these broadcasts only when the OTS IS COMPLETED
+            String is_ots_completed = configurationReader.getIsOtsCompleted().trim();
+            if( is_ots_completed.equals( "0" ) ) {
+                Log.d( TAG, "OTS has not been completed, DataDownloader Broadcasts will not execute !" );
+                return;
+            }
 
             // These broadcasts are to be FIRED only once per box reboot
             if( ! isConnectivityBroadcastFired() ) {
@@ -115,7 +165,7 @@ public class Receiver extends BroadcastReceiver {
         in.putExtra( "show_prompt", true );
         PendingIntent pi = PendingIntent.getBroadcast( context, 0, in, 0 );
         am.cancel( pi );
-        am.set( AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 20000, pi );
+        am.set( AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 3600000, pi ); // 1 hour
         //upgrade_postponed = true;
     }
 
