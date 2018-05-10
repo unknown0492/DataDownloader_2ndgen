@@ -86,7 +86,6 @@ public class DownloadPreinstallApks extends Service {
                 Log.d( TAG, "response : "+s );
                 processResult( s );
 
-
             }
 
         } ).start();*/
@@ -107,7 +106,6 @@ public class DownloadPreinstallApks extends Service {
         }
         downloadReferences = new Vector<Long>();
         downloadManager = (DownloadManager) getSystemService( Context.DOWNLOAD_SERVICE );
-
 
         // Create preinstall Directory if does not exist
         File file = new File( configurationReader.getPreinstallApksDirectoryPath( false ) );

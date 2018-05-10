@@ -127,6 +127,7 @@ public class DownloadWallpaperService extends Service {
         ConfigurationReader configurationReader = ConfigurationReader.getInstance();
         File path = new File( configurationReader.getDigitalSignageDirectoryPath() );
         Log.d( TAG, "digital signage path : "+path.getAbsolutePath() );
+
         /*File test = new File( "/storage/emulated/0/appstv_data1/graphics1/digital_signage1" );
         test.mkdirs();*/
         downloadManager = (DownloadManager) getSystemService( Context.DOWNLOAD_SERVICE );
@@ -139,9 +140,8 @@ public class DownloadWallpaperService extends Service {
 
             md5 = wpi[ i ].getMD5();
             file_name = wpi[ i ].getFileName();
-            file_path = wpi[ i ].getFilePath();
+            file_path = getURLEncodedFilePath( wpi[ i ].getFilePath() );
             sequence = wpi[ i ].getSequence();
-
 
             File wallpaper = new File( path + File.separator + file_name );
 
@@ -169,7 +169,6 @@ public class DownloadWallpaperService extends Service {
                     downloadSingleWallpaper( file_name, file_path, wallpaper.getAbsolutePath() );
                 }
 
-
             }
 
         }
@@ -180,11 +179,24 @@ public class DownloadWallpaperService extends Service {
         //unregisterReceiver( receiverDownloadComplete );
     }
 
+    private String removeSpacesFromString( String string ){
+        return string.replaceAll( " ", "-" );
+    }
 
+    private String getURLEncodedFilePath( String file_path ){
+
+        if( file_path.contains( " " ) ) {
+            return file_path.replace( " ", "%20" );
+        }
+        return file_path;
+    }
 
     private void downloadSingleWallpaper( String file_name, String file_path, String file_save_path ){
         Log.d( TAG, "Downloading wallpaper : "+file_name );
-        Uri uri = Uri.parse( UtilURL.getCMSRootPath() + file_path );
+
+        String url = UtilURL.getCMSRootPath() + file_path;
+        Log.d( TAG, "url : "+url );
+        Uri uri = Uri.parse( url );
         DownloadManager.Request request = new DownloadManager.Request( uri );
         request.setNotificationVisibility( DownloadManager.Request.VISIBILITY_HIDDEN );
         //request.setDestinationInExternalFilesDir( context, getExternalFilesDir( "Launcher" ).getAbsolutePath(), file_name );
@@ -208,13 +220,17 @@ public class DownloadWallpaperService extends Service {
                     long ref = downloadReferences [ i ];
                 //for( long ref : downloadReferences ){
                     if( ref == reference ){
-                        //
                         DownloadManager.Query query = new DownloadManager.Query();
                         query.setFilterById( ref );
                         Cursor cursor = downloadManager.query( query );
                         cursor.moveToFirst();
                         int status = cursor.getInt( cursor.getColumnIndex( DownloadManager.COLUMN_STATUS ) );
                         String savedFilePath = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
+                        if( savedFilePath == null ) {
+                            Log.e( TAG, "savedFilePath is null for : " + status);
+                            return;
+                        }
+                        Log.d( TAG, "savedFilePath : " + savedFilePath);
                         savedFilePath = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
@@ -232,7 +248,6 @@ public class DownloadWallpaperService extends Service {
                             case DownloadManager.STATUS_RUNNING:
                                 Log.d( TAG, savedFilePath + " downloading !" );
                                 break;
-
 
                         }
                         downloadReferences[ i ] = -1;
