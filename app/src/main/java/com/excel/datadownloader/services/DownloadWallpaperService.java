@@ -1,19 +1,28 @@
 package com.excel.datadownloader.services;
 
 import android.app.DownloadManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+
 import com.excel.configuration.ConfigurationReader;
+import com.excel.configuration.DigitalSignageManager;
+import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilURL;
@@ -31,7 +40,7 @@ import java.io.File;
 public class DownloadWallpaperService extends Service {
 
     final static String TAG = "DownloadWallpaper";
-    Context context;
+    Context context = this;
     RetryCounter retryCounter;
     DownloadManager downloadManager;
     private BroadcastReceiver receiverDownloadComplete;
@@ -53,6 +62,37 @@ public class DownloadWallpaperService extends Service {
         downloadWallpapers();
 
         return START_STICKY;
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationCompat.Builder notificationBuilder;
+        notificationBuilder = new NotificationCompat.Builder(this, "test" );
+        notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
+        notificationManager.notify(0, notificationBuilder.build());
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel( channel );
+
+            Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
+            startForeground(1, notification);
+        }
+        else {
+            // startForeground(1, notification);
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        unregisterReceiver( receiverDownloadComplete );
     }
 
     private void downloadWallpapers(){
@@ -94,13 +134,17 @@ public class DownloadWallpaperService extends Service {
             }
             else if( type.equals( "success" ) ){
                 jsonArray = new JSONArray( info );
+                DigitalSignageManager.writeDigitalSignageConfig(jsonArray.toString());
                 WallpaperInfo wpi[] = new WallpaperInfo[ jsonArray.length() ];
                 downloadReferences = new long[ jsonArray.length() ];
+                counter = 0;
+
                 for( int i = 0 ; i < jsonArray.length(); i++ ){
                     jsonObject = jsonArray.getJSONObject( i );
                     wpi[ i ] = new WallpaperInfo( jsonObject.getString( "file_name" ),
                             jsonObject.getString( "file_path" ),
-                            jsonObject.getString( "md5" ) );
+                            jsonObject.getString( "md5" ),
+                            jsonObject.getInt( "sequence" ) );
                     // Log.d( TAG, wpi[ i ].getFileName() + " - " + wpi[ i ].getFilePath() + " - " +wpi[ i ].getMD5() );
                 }
 
@@ -204,24 +248,27 @@ public class DownloadWallpaperService extends Service {
                         query.setFilterById( ref );
                         Cursor cursor = downloadManager.query( query );
                         cursor.moveToFirst();
+                        String downloadedFileURI = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_URI ) );
                         int status = cursor.getInt( cursor.getColumnIndex( DownloadManager.COLUMN_STATUS ) );
-                        String savedFilePath = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
-                        savedFilePath = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
+                        File savedFile = new File( Uri.parse( downloadedFileURI ).getPath() );
+                        String savedFilePath = savedFile.getAbsolutePath();//cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
+                        String fileName = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
+
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
-                                Log.i( TAG, savedFilePath + " downloaded successfully !" );
+                                Log.i( TAG, fileName + " downloaded successfully !" );
                                 break;
                             case DownloadManager.STATUS_FAILED:
-                                Log.e( TAG, savedFilePath + " failed to download !" );
+                                Log.e( TAG, fileName + " failed to download !" );
                                 break;
                             case DownloadManager.STATUS_PAUSED:
-                                Log.e( TAG, savedFilePath + " download paused !" );
+                                Log.e( TAG, fileName + " download paused !" );
                                 break;
                             case DownloadManager.STATUS_PENDING:
-                                Log.e( TAG, savedFilePath + " download pending !" );
+                                Log.e( TAG, fileName + " download pending !" );
                                 break;
                             case DownloadManager.STATUS_RUNNING:
-                                Log.d( TAG, savedFilePath + " downloading !" );
+                                Log.d( TAG, fileName + " downloading !" );
                                 break;
 
 
@@ -299,11 +346,13 @@ public class DownloadWallpaperService extends Service {
         private String file_name;
         private String file_path;
         private String md5;
+        private int sequence;
 
-        public WallpaperInfo( String file_name, String file_path, String md5 ){
+        public WallpaperInfo( String file_name, String file_path, String md5, int sequence ){
             this.setFileName(file_name);
             this.setFilePath(file_path);
             this.setMD5(md5);
+            this.setSequence(sequence);
         }
 
 
@@ -329,6 +378,14 @@ public class DownloadWallpaperService extends Service {
 
         public void setMD5(String md5) {
             this.md5 = md5;
+        }
+
+        public int getSequence() {
+            return this.sequence;
+        }
+
+        public void setSequence(int sequence2) {
+            this.sequence = sequence2;
         }
     }
 }

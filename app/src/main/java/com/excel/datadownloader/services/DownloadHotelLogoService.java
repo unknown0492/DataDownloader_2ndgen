@@ -1,20 +1,31 @@
 package com.excel.datadownloader.services;
 
 import android.app.DownloadManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContentResolverCompat;
+
 import com.excel.configuration.ConfigurationReader;
+import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilURL;
 import com.excel.util.MD5;
@@ -23,6 +34,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileDescriptor;
+
+import static com.excel.excelclasslibrary.Constants.APPSTVLAUNCHER_PACKAGE_NAME;
+import static com.excel.excelclasslibrary.Constants.APPSTVLAUNCHER_RECEIVER_NAME;
 
 /**
  * Created by Sohail on 04-11-2016.
@@ -31,7 +46,7 @@ import java.io.File;
 public class DownloadHotelLogoService extends Service {
 
     final static String TAG = "DownloadHotelLogo";
-    Context context;
+    Context context = this;
     RetryCounter retryCounter;
     DownloadManager downloadManager;
     private BroadcastReceiver receiverDownloadComplete;
@@ -55,6 +70,30 @@ public class DownloadHotelLogoService extends Service {
         return START_STICKY;
     }
 
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationCompat.Builder notificationBuilder;
+        notificationBuilder = new NotificationCompat.Builder(this, "test" );
+        notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
+        notificationManager.notify(0, notificationBuilder.build());
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel( channel );
+
+            Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
+            startForeground(1, notification);
+        }
+        else {
+            // startForeground(1, notification);
+        }
+    }
+
     private void downloadHotelLogo(){
         new Thread(new Runnable(){
 
@@ -74,7 +113,6 @@ public class DownloadHotelLogoService extends Service {
                 Log.d( TAG, "response : "+s );
                 processResult( s );
 
-
             }
 
         }).start();
@@ -91,6 +129,11 @@ public class DownloadHotelLogoService extends Service {
                 Log.e( TAG, "Error : "+info );
 
                 //setRetryTimer();  // because, error means that Hotel Logo Display has been TURNED OFF for this CMS
+
+                Intent intent = new Intent();
+                intent.putExtra( "hasHotelLogoDisplay", false );
+                UtilMisc.sendExplicitExternalBroadcast( context, intent, "receive_get_hotel_logo", APPSTVLAUNCHER_PACKAGE_NAME, APPSTVLAUNCHER_RECEIVER_NAME );
+
                 return;
             }
             else if( type.equals( "success" ) ){
@@ -140,6 +183,11 @@ public class DownloadHotelLogoService extends Service {
                 if ( md5.equals( MD5.getMD5Checksum( hotel_logo ) ) ){
                     // If md5 is the same, no need to download the wallpaper again, ignore and continue
                     Log.e( TAG, "Ignoring logo download : "+logo_path );
+
+                    Intent intent = new Intent();
+                    intent.putExtra( "hasHotelLogoDisplay", true );
+                    UtilMisc.sendExplicitExternalBroadcast( context, intent, "receive_get_hotel_logo", APPSTVLAUNCHER_PACKAGE_NAME, APPSTVLAUNCHER_RECEIVER_NAME );
+
                     return;
                 }
                 // Delete the existing One
@@ -158,8 +206,6 @@ public class DownloadHotelLogoService extends Service {
 
     }
 
-
-
     private void downloadLogo( String file_name, String file_path, String file_save_path ){
         Log.d( TAG, "Downloading hotel logo : "+file_name );
         Uri uri = Uri.parse( UtilURL.getCMSRootPath() + file_path );
@@ -172,12 +218,17 @@ public class DownloadHotelLogoService extends Service {
 
     private void  registerDownloadCompleteReceiver(){
         IntentFilter intentFilter = new IntentFilter( DownloadManager.ACTION_DOWNLOAD_COMPLETE );
+
         receiverDownloadComplete = new BroadcastReceiver() {
 
             @Override
-            public void onReceive(Context context, Intent intent) {
+            public void onReceive( Context context, Intent intent ){
+                Log.d( TAG, "registerDownloadCompleteReceiver() onReceive" );
+
                 long reference = intent.getLongExtra( DownloadManager.EXTRA_DOWNLOAD_ID, -1 );
                 long ref = downloadReference;
+                Log.d( TAG, "Action : " + intent.getAction() );
+                Log.d( TAG, "Reference : " + downloadReference );
                 //for( long ref : downloadReferences ){
                     if( ref == reference ){
                         //
@@ -185,12 +236,19 @@ public class DownloadHotelLogoService extends Service {
                         query.setFilterById( ref );
                         Cursor cursor = downloadManager.query( query );
                         cursor.moveToFirst();
+                        String downloadedFileURI = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_URI ) );
                         int status = cursor.getInt( cursor.getColumnIndex( DownloadManager.COLUMN_STATUS ) );
-                        String savedFilePath = cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
+                        File savedFile = new File( Uri.parse( downloadedFileURI ).getPath() );
+                        String savedFilePath = savedFile.getAbsolutePath();//cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
                         savedFilePath = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
+
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
+                                Intent in = new Intent();
+                                in.putExtra( "hasHotelLogoDisplay", true );
+                                UtilMisc.sendExplicitExternalBroadcast( context, in, "receive_get_hotel_logo", APPSTVLAUNCHER_PACKAGE_NAME, APPSTVLAUNCHER_RECEIVER_NAME );
                                 Log.i( TAG, savedFilePath + " downloaded successfully !" );
+                                unregisterReceiver( receiverDownloadComplete );
                                 break;
                             case DownloadManager.STATUS_FAILED:
                                 Log.e( TAG, savedFilePath + " failed to download !" );
@@ -204,17 +262,19 @@ public class DownloadHotelLogoService extends Service {
                             case DownloadManager.STATUS_RUNNING:
                                 Log.d( TAG, savedFilePath + " downloading !" );
                                 break;
-
-
                         }
-
                     }
-
             }
         };
         registerReceiver( receiverDownloadComplete, intentFilter );
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        unregisterReceiver( receiverDownloadComplete );
+    }
 
     private void setRetryTimer(){
         final long time = retryCounter.getRetryTime();

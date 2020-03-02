@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +20,9 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Translucent.NoTitleBar"
-        tools:replace="android:theme">
+        tools:replace="android:theme"
+        android:usesCleartextTraffic="true">
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,17 +31,15 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.excel.datadownloader.secondgen.Receiver">
-            <intent-filter>
-                <action android:name="get_wallpapers" />
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
-                <action android:name="connectivity_changed" />
-                <action android:name="get_hotel_logo" />
-            </intent-filter>
+        <receiver android:name="com.excel.datadownloader.secondgen.Receiver"
+            android:exported="true">
         </receiver>
 
         <service android:name="com.excel.datadownloader.services.DownloadWallpaperService" />
         <service android:name="com.excel.datadownloader.services.DownloadHotelLogoService" />
+        <service android:name="com.excel.datadownloader.services.DownloadOTAService" />
+        <service android:name="com.excel.datadownloader.services.DownloadPreinstallApks" />
+        <service android:name="com.excel.datadownloader.services.DownloadTvChannelsService" />
     </application>
 
 </manifest>

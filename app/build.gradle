@@ -1,31 +1,50 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "24.0.0"
+    compileSdkVersion 29
+    buildToolsVersion "28.0.3"
+    signingConfigs {
+
+        def propsFile = file('keystore.properties')
+        def props = new Properties()
+        props.load(new FileInputStream(propsFile))
+
+        debug {
+            storeFile file(props['storeFile'])
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+        release {
+            storeFile file(props['storeFile'])
+            storePassword props['storePassword']
+            keyAlias props['keyAlias']
+            keyPassword props['keyPassword']
+        }
+    }
     defaultConfig {
         applicationId "com.excel.datadownloader.secondgen"
-        minSdkVersion 17
-        targetSdkVersion 23
-        versionCode 1
-        versionName "1.0.1"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        minSdkVersion 21
+        targetSdkVersion 29
+        versionCode 4
+        versionName "4.0.0"
         project.ext.set("archivesBaseName", "0-DataDownloader_2ndGen_v" + defaultConfig.versionName);
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            debuggable true
+        }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            debuggable true
         }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
-        exclude group: 'com.android.support', module: 'support-annotations'
-    })
-    compile 'com.android.support:appcompat-v7:23.4.0'
-    compile project(':ExcelClassLibrary-debug')
-    testCompile 'junit:junit:4.12'
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation project(':ExcelClassLibrary')
+    implementation 'com.squareup.picasso:picasso:2.71828'
 }
