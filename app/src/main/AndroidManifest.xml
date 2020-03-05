@@ -26,13 +26,15 @@
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
         <receiver android:name="com.excel.datadownloader.secondgen.Receiver"
             android:exported="true">
+            <intent-filter>
+                <action android:name="connectivity_change" />
+            </intent-filter>
         </receiver>
 
         <service android:name="com.excel.datadownloader.services.DownloadWallpaperService" />
