@@ -92,7 +92,10 @@ public class DownloadWallpaperService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver( receiverDownloadComplete );
+        if( receiverDownloadComplete != null ) {
+            unregisterReceiver(receiverDownloadComplete);
+            receiverDownloadComplete = null;
+        }
     }
 
     private void downloadWallpapers(){
@@ -206,10 +209,7 @@ public class DownloadWallpaperService extends Service {
                     // Download the wallpaper and save it with the File Name
                     downloadSingleWallpaper( file_name, file_path, wallpaper.getAbsolutePath() );
                 }
-
-
             }
-
         }
         // After everything is downloaded, delete all the wallpapers from the directory whose names are not in the list of
         // wallpaper names received
@@ -217,8 +217,6 @@ public class DownloadWallpaperService extends Service {
 
         //unregisterReceiver( receiverDownloadComplete );
     }
-
-
 
     private void downloadSingleWallpaper( String file_name, String file_path, String file_save_path ){
         Log.d( TAG, "Downloading wallpaper : "+file_name );

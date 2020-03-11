@@ -49,7 +49,7 @@ public class DownloadHotelLogoService extends Service {
     Context context = this;
     RetryCounter retryCounter;
     DownloadManager downloadManager;
-    private BroadcastReceiver receiverDownloadComplete;
+    private BroadcastReceiver receiverDownloadComplete = null;
     long downloadReference;
     int counter = 0;
 
@@ -248,7 +248,10 @@ public class DownloadHotelLogoService extends Service {
                                 in.putExtra( "hasHotelLogoDisplay", true );
                                 UtilMisc.sendExplicitExternalBroadcast( context, in, "receive_get_hotel_logo", APPSTVLAUNCHER_PACKAGE_NAME, APPSTVLAUNCHER_RECEIVER_NAME );
                                 Log.i( TAG, savedFilePath + " downloaded successfully !" );
-                                unregisterReceiver( receiverDownloadComplete );
+                                if( receiverDownloadComplete != null ) {
+                                    unregisterReceiver(receiverDownloadComplete);
+                                    receiverDownloadComplete = null;
+                                }
                                 break;
                             case DownloadManager.STATUS_FAILED:
                                 Log.e( TAG, savedFilePath + " failed to download !" );
@@ -273,7 +276,10 @@ public class DownloadHotelLogoService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver( receiverDownloadComplete );
+        if( receiverDownloadComplete != null ) {
+            unregisterReceiver( receiverDownloadComplete );
+            receiverDownloadComplete = null;
+        }
     }
 
     private void setRetryTimer(){

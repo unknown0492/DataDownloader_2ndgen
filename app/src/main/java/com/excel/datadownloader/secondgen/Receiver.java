@@ -6,11 +6,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
@@ -24,8 +26,12 @@ import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilSharedPreferences;
 import com.excel.excelclasslibrary.UtilShell;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.excel.datadownloader.util.Constants.IS_PERMISSION_GRANTED;
 import static com.excel.datadownloader.util.Constants.PERMISSION_GRANTED_NO;
+import static com.excel.datadownloader.util.Constants.PERMISSION_GRANTED_YES;
 import static com.excel.datadownloader.util.Constants.PERMISSION_SPFS;
 
 
@@ -196,4 +202,5 @@ public class Receiver extends BroadcastReceiver {
         }
         return true;
     }
+
 }

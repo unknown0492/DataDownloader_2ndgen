@@ -44,7 +44,7 @@ public class DownloadTvChannelsService extends Service {
     int counter = 0;
     DownloadManager downloadManager;
     long downloadReference;
-    private BroadcastReceiver receiverDownloadComplete;
+    private BroadcastReceiver receiverDownloadComplete = null;
     RetryCounter retryCounter;
 
     public IBinder onBind(Intent intent) {
@@ -91,7 +91,10 @@ public class DownloadTvChannelsService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver( receiverDownloadComplete );
+        if( receiverDownloadComplete != null ) {
+            unregisterReceiver(receiverDownloadComplete);
+            receiverDownloadComplete = null;
+        }
     }
 
     /* access modifiers changed from: private */
@@ -237,7 +240,10 @@ public class DownloadTvChannelsService extends Service {
                     switch( status ){
                         case DownloadManager.STATUS_SUCCESSFUL:
                             Log.i( TAG,  fileName + " downloaded successfully !" );
-                            unregisterReceiver( receiverDownloadComplete );
+                            if( receiverDownloadComplete != null ) {
+                                unregisterReceiver(receiverDownloadComplete);
+                                receiverDownloadComplete = null;
+                            }
                             break;
                         case DownloadManager.STATUS_FAILED:
                             Log.e( TAG, savedFilePath + " failed to download !" );

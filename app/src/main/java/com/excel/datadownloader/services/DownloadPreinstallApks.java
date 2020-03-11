@@ -17,6 +17,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -48,7 +49,7 @@ public class DownloadPreinstallApks extends Service {
     String log = "";
     PreinstallApps[] papps;
     PackageInfo pifo;
-    private BroadcastReceiver receiverDownloadComplete;
+    private BroadcastReceiver receiverDownloadComplete = null;
     RetryCounter retryCounter;
 
     public IBinder onBind(Intent intent) {
@@ -64,7 +65,7 @@ public class DownloadPreinstallApks extends Service {
         inn = intent;
         downloadPreinstallApks();
 
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -79,22 +80,33 @@ public class DownloadPreinstallApks extends Service {
         notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
         notificationManager.notify(0, notificationBuilder.build());
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+        if ( android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ) {
+            NotificationChannel channel = new NotificationChannel( "test", TAG, NotificationManager.IMPORTANCE_HIGH );
             notificationManager.createNotificationChannel( channel );
 
-            Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
-            startForeground(1, notification);
+            Notification notification = new Notification.Builder( getApplicationContext(),"test" ).build();
+            startForeground(1, notification );
         }
-        else {
+        else{
             // startForeground(1, notification);
         }
     }
 
     private void downloadPreinstallApks() {
         String s = inn.getStringExtra("json");
-        Log.d( TAG, "json : " + s );
-        processResult( s );
+        if( s != null ) {
+            Log.d(TAG, "json : " + s);
+            new AsyncTask<Object, Void, Void>(){
+
+                @Override
+                protected Void doInBackground(Object... objects) {
+                    processResult((String)objects[ 0 ]);
+                    return null;
+                }
+
+            }.execute( s );
+            // processResult(s);
+        }
     }
 
     private void processResult(String json) {
@@ -111,6 +123,21 @@ public class DownloadPreinstallApks extends Service {
         try {
             JSONArray jsonArray = new JSONArray( new JSONArray( json ).getJSONObject(0 ).getString("info" ) );
             for ( int i2 = 0; i2 < jsonArray.length(); i2++ ) {
+                /*new AsyncTask<Object, Void, Void>(){
+
+                    @Override
+                    protected Void doInBackground( Object... objs ) {
+                        JSONArray ja = (JSONArray) objs[ 0 ];
+                        int i = (int) objs[ 1 ];
+                        try {
+                            verifyAndDownloadApks( ja.getJSONObject( i ), papps[ i ] );
+                        } catch ( JSONException e ) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }
+
+                }.execute( jsonArray, i2 );*/
                 verifyAndDownloadApks( jsonArray.getJSONObject( i2 ), papps[ i2 ] );
             }
         }
@@ -195,7 +222,7 @@ public class DownloadPreinstallApks extends Service {
                     e4.printStackTrace();
                 }
                 if ( !base_md5.equals( new_md5 ) ){
-                    uninstallApk( package_name.getAbsolutePath() );
+                    uninstallApk( pa.getPackageName() );
                     Log.d( TAG, "Force Installing !" );
                     installApk( package_name.getAbsolutePath() );
                 }
@@ -212,6 +239,16 @@ public class DownloadPreinstallApks extends Service {
         long reff = downloadManager.enqueue( request );
         Log.i( TAG, "Download ref for " + file_name + " is : " + reff );
         downloadReferences.add( reff );
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if( receiverDownloadComplete != null ) {
+            unregisterReceiver(receiverDownloadComplete);
+            receiverDownloadComplete = null;
+        }
     }
 
     private void registerDownloadCompleteReceiver() {
@@ -256,7 +293,10 @@ public class DownloadPreinstallApks extends Service {
                                 Log.i( TAG, fileName + " downloaded successfully !" );
                                 uninstallApk( fileName );
                                 installApk( savedFilePath );
-                                unregisterReceiver( receiverDownloadComplete );
+                                if( receiverDownloadComplete != null ) {
+                                    unregisterReceiver(receiverDownloadComplete);
+                                    receiverDownloadComplete = null;
+                                }
                                 break;
 
                             case DownloadManager.STATUS_PENDING:

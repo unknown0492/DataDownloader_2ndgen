@@ -62,7 +62,7 @@ public class DownloadOTAService extends Service {
     String new_firmware_md5 = "";
     String ota_type = "";
     File ota_update_zip_file;
-    private BroadcastReceiver receiverDownloadComplete;
+    private BroadcastReceiver receiverDownloadComplete = null;
     RetryCounter retryCounter;
     double total;
 
@@ -469,7 +469,10 @@ public class DownloadOTAService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        unregisterReceiver( receiverDownloadComplete );
+        if( receiverDownloadComplete != null ) {
+            unregisterReceiver(receiverDownloadComplete);
+            receiverDownloadComplete = null;
+        }
     }
 
     /* access modifiers changed from: private */
