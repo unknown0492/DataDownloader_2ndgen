@@ -24,6 +24,7 @@ import com.excel.configuration.ConfigurationReader;
 import com.excel.configuration.DigitalSignageManager;
 import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilFile;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilURL;
 import com.excel.util.MD5;
@@ -68,20 +69,20 @@ public class DownloadWallpaperService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+        Bitmap icon = BitmapFactory.decodeResource( getResources(), R.drawable.ic_launcher );
 
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager notificationManager = (NotificationManager) getSystemService( Context.NOTIFICATION_SERVICE );
         NotificationCompat.Builder notificationBuilder;
         notificationBuilder = new NotificationCompat.Builder(this, "test" );
         notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager.notify(0, notificationBuilder.build() );
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+        if ( android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ) {
+            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_LOW );
             notificationManager.createNotificationChannel( channel );
 
-            Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
-            startForeground(1, notification);
+            Notification notification = new Notification.Builder( getApplicationContext(),"test" ).build();
+            startForeground(1, notification );
         }
         else {
             // startForeground(1, notification);
@@ -116,7 +117,6 @@ public class DownloadWallpaperService extends Service {
                 }
                 Log.d( TAG, "response : "+s );
                 processResult( s );
-
 
             }
 
@@ -224,11 +224,15 @@ public class DownloadWallpaperService extends Service {
         DownloadManager.Request request = new DownloadManager.Request( uri );
         request.setNotificationVisibility( DownloadManager.Request.VISIBILITY_HIDDEN );
         //request.setDestinationInExternalFilesDir( context, getExternalFilesDir( "Launcher" ).getAbsolutePath(), file_name );
-        request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
+        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+        File file_save_temp_path = new File( context.getExternalFilesDir( "wallpaper" ).getAbsolutePath() + File.separator + file_name );
+        file_save_temp_path.delete();
+        request.setDestinationUri( Uri.fromFile( file_save_temp_path ) );
         downloadReferences[ counter++ ] = downloadManager.enqueue( request );
     }
 
-    private void  registerDownloadCompleteReceiver(){
+    private void registerDownloadCompleteReceiver(){
         IntentFilter intentFilter = new IntentFilter( DownloadManager.ACTION_DOWNLOAD_COMPLETE );
         receiverDownloadComplete = new BroadcastReceiver() {
 
@@ -255,6 +259,14 @@ public class DownloadWallpaperService extends Service {
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
                                 Log.i( TAG, fileName + " downloaded successfully !" );
+                                // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                                // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+                                File file_save_temp_path = new File( context.getExternalFilesDir( "wallpaper" ).getAbsolutePath() + File.separator + fileName );
+                                ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                                File path = new File( configurationReader.getDigitalSignageDirectoryPath() );
+                                File wallpaper = new File( path + File.separator + fileName );
+                                UtilFile.copyFile( file_save_temp_path, wallpaper );
+                                file_save_temp_path.delete();
                                 break;
                             case DownloadManager.STATUS_FAILED:
                                 Log.e( TAG, fileName + " failed to download !" );
@@ -268,7 +280,6 @@ public class DownloadWallpaperService extends Service {
                             case DownloadManager.STATUS_RUNNING:
                                 Log.d( TAG, fileName + " downloading !" );
                                 break;
-
 
                         }
                         downloadReferences[ i ] = -1;

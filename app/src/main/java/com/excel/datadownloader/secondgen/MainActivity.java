@@ -67,6 +67,7 @@ public class MainActivity extends Activity {
         receiver = new Receiver();
         intentFilterVector = new Vector<IntentFilter>();
         intentFilterVector.add( new IntentFilter( "connectivity_change" ) );
+        //intentFilterVector.add( new IntentFilter( "android.net.conn.CONNECTIVITY_CHANGE" ) );
         intentFilterVector.add( new IntentFilter( "get_wallpapers" ) );
         intentFilterVector.add( new IntentFilter( "get_hotel_logo" ) );
         intentFilterVector.add( new IntentFilter( "get_tv_channels_file" ) );

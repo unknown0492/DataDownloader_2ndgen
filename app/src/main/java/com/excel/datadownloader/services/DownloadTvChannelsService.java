@@ -26,6 +26,7 @@ import androidx.core.app.NotificationCompat;
 import com.excel.configuration.ConfigurationReader;
 import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilFile;
 import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilShell;
@@ -76,7 +77,7 @@ public class DownloadTvChannelsService extends Service {
         notificationManager.notify(0, notificationBuilder.build() );
 
         if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
-            NotificationChannel channel = new NotificationChannel("test", TAG, NotificationManager.IMPORTANCE_HIGH );
+            NotificationChannel channel = new NotificationChannel("test", TAG, NotificationManager.IMPORTANCE_LOW );
             notificationManager.createNotificationChannel( channel );
 
             Notification notification = new Notification.Builder( getApplicationContext(), "test" ).build();
@@ -177,7 +178,11 @@ public class DownloadTvChannelsService extends Service {
         Log.d( TAG, "Downloading TV Channels file : " + file_name );
         Request request = new Request( Uri.parse(UtilURL.getCMSRootPath() + file_path ) );
         request.setNotificationVisibility( Request.VISIBILITY_HIDDEN );
-        request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
+        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+        File file_save_temp_path = new File( context.getExternalFilesDir( "tv_channels" ).getAbsolutePath() + File.separator + file_name );
+        file_save_temp_path.delete();
+        request.setDestinationUri( Uri.fromFile( file_save_temp_path ) );
         downloadReference = downloadManager.enqueue( request );
 
     }
@@ -241,8 +246,23 @@ public class DownloadTvChannelsService extends Service {
                         case DownloadManager.STATUS_SUCCESSFUL:
                             Log.i( TAG,  fileName + " downloaded successfully !" );
                             if( receiverDownloadComplete != null ) {
-                                unregisterReceiver(receiverDownloadComplete);
+                                Log.i( TAG, "receiverDownloadComplete not null" );
+
+                                unregisterReceiver( receiverDownloadComplete );
                                 receiverDownloadComplete = null;
+
+                                // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                                // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+                                File file_save_temp_path = new File( context.getExternalFilesDir( "tv_channels" ).getAbsolutePath() + File.separator + fileName );
+                                ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                                Log.i( TAG, "file_save_temp_path: " + file_save_temp_path.getAbsolutePath() );
+
+                                File path = new File( ConfigurationReader.getInstance().getTvChannelsDirectoryPath() );
+                                File tv_channels = new File( path + File.separator + fileName );
+                                Log.i( TAG, "tv_channels: " + tv_channels.getAbsolutePath() );
+
+                                UtilFile.copyFile( file_save_temp_path, tv_channels );
+                                file_save_temp_path.delete();
                             }
                             break;
                         case DownloadManager.STATUS_FAILED:

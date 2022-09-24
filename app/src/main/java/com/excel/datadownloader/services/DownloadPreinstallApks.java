@@ -23,12 +23,14 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+
 import androidx.core.app.NotificationCompat;
 
 import com.excel.configuration.ConfigurationReader;
 import com.excel.configuration.PreinstallApps;
 import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilFile;
 import com.excel.excelclasslibrary.UtilShell;
 import com.excel.excelclasslibrary.UtilURL;
 import com.excel.util.MD5;
@@ -39,6 +41,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class DownloadPreinstallApks extends Service {
+
     static final String TAG = "DownloadApks";
     ConfigurationReader configurationReader;
     Context context;
@@ -81,11 +84,11 @@ public class DownloadPreinstallApks extends Service {
         notificationManager.notify(0, notificationBuilder.build());
 
         if ( android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ) {
-            NotificationChannel channel = new NotificationChannel( "test", TAG, NotificationManager.IMPORTANCE_HIGH );
+            NotificationChannel channel = new NotificationChannel( "test", TAG, NotificationManager.IMPORTANCE_LOW );
             notificationManager.createNotificationChannel( channel );
 
             Notification notification = new Notification.Builder( getApplicationContext(),"test" ).build();
-            startForeground(1, notification );
+            startForeground( 1, notification );
         }
         else{
             // startForeground(1, notification);
@@ -93,9 +96,9 @@ public class DownloadPreinstallApks extends Service {
     }
 
     private void downloadPreinstallApks() {
-        String s = inn.getStringExtra("json");
+        String s = inn.getStringExtra("json" );
         if( s != null ) {
-            Log.d(TAG, "json : " + s);
+            Log.d( TAG, "json : " + s );
             new AsyncTask<Object, Void, Void>(){
 
                 @Override
@@ -109,10 +112,10 @@ public class DownloadPreinstallApks extends Service {
         }
     }
 
-    private void processResult(String json) {
+    private void processResult( String json ) {
         this.papps = PreinstallApps.getPreinstallApps();
-        for (int i = 0; i < this.papps.length; i++) {
-            Log.d( TAG, " " + i + " : " + papps[i].getPackageName());
+        for ( int i = 0; i < this.papps.length; i++ ) {
+            Log.d( TAG, " " + i + " : " + papps[ i ].getPackageName() );
         }
         downloadReferences = new Vector<>();
         downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE );
@@ -146,14 +149,52 @@ public class DownloadPreinstallApks extends Service {
         }
     }
 
-    private void verifyAndDownloadApks(JSONObject jsonObject, PreinstallApps pa) {
+    private void verifyAndDownloadApks( JSONObject jsonObject, PreinstallApps pa ) {
         boolean need_old_md5;
-        File package_name = new File( configurationReader.getPreinstallApksDirectoryPath(false ) + File.separator + pa.getPackageName() + ".apk" );
+        // File package_name = new File( configurationReader.getPreinstallApksDirectoryPath(false ) + File.separator + pa.getPackageName() + ".apk" );
+        File package_name = new File( "/data/data" + File.separator + pa.getPackageName()  );
         File package_name_sdcard = new File( configurationReader.getPreinstallApksDirectoryPath(false) + File.separator + pa.getPackageName() + ".apk" );
         String old_md5 = "";
         boolean is_package_from_sdcard = false;
         Log.d( TAG, "Testing for package_name : " + package_name );
 
+        if( package_name.exists() ){
+            try {
+                PackageManager pm = context.getPackageManager();
+                PackageInfo pInfo = pm.getPackageInfo( pa.getPackageName(), 0 );
+                String versionNameOld = pInfo.versionName;
+                String versionNameNew = jsonObject.getString( "version" );
+                Log.d( TAG, pa.getPackageName() + "; Old version: " + versionNameOld + ", New version: " + versionNameNew );
+
+                if( !versionNameOld.equals( versionNameNew ) ){
+                    // Download the New APK
+                    Log.d( TAG, "This seems to be a new app : " + package_name.getAbsolutePath() );
+                    Log.d( TAG, "New Apk on the CMS : " + pa.getPackageName() );
+
+                    String appName = pa.getPackageName() + ".apk";
+                    downloadSingleApk( appName, jsonObject.getString("apk_url" ), package_name_sdcard.getAbsolutePath() );
+                }
+                else{
+                    Log.i( TAG, "No need to download the package: " + pa.getPackageName() );
+                }
+
+            }
+            catch( Exception e ) {
+                e.printStackTrace();
+            }
+        }
+        else{
+            Log.d( TAG, "New Apk on the CMS : " + pa.getPackageName() );
+
+            String appName = pa.getPackageName() + ".apk";
+            try {
+                downloadSingleApk(appName, jsonObject.getString("apk_url"), package_name_sdcard.getAbsolutePath());
+            }
+            catch( Exception e ) {
+                e.printStackTrace();
+            }
+        }
+/*
         if( package_name.exists() ){
             need_old_md5 = true;
             is_package_from_sdcard = true;
@@ -172,7 +213,8 @@ public class DownloadPreinstallApks extends Service {
 
                     String appName = pa.getPackageName() + ".apk";
                     downloadSingleApk( appName, jsonObject.getString("apk_url" ), package_name_sdcard.getAbsolutePath());
-                } catch (JSONException e) {
+                }
+                catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
@@ -227,15 +269,19 @@ public class DownloadPreinstallApks extends Service {
                     installApk( package_name.getAbsolutePath() );
                 }
             }
-        }
+        }*/
     }
 
-    private void downloadSingleApk(String file_name, String file_path, String file_save_path) {
+    private void downloadSingleApk( String file_name, String file_path, String file_save_path ) {
         Log.d( TAG, "Downloading Apk : " + file_name );
         Log.d( TAG, "File save path : " + file_save_path );
         Request request = new Request( Uri.parse( UtilURL.getCMSRootPath() + file_path ) );
         request.setNotificationVisibility( Request.VISIBILITY_HIDDEN );
-        request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
+        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+        File file_save_temp_path = new File( context.getExternalFilesDir( "preinstall" ).getAbsolutePath() + File.separator + file_name );
+        file_save_temp_path.delete();
+        request.setDestinationUri( Uri.fromFile( file_save_temp_path ) );
         long reff = downloadManager.enqueue( request );
         Log.i( TAG, "Download ref for " + file_name + " is : " + reff );
         downloadReferences.add( reff );
@@ -297,6 +343,15 @@ public class DownloadPreinstallApks extends Service {
                                     unregisterReceiver(receiverDownloadComplete);
                                     receiverDownloadComplete = null;
                                 }
+                                // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                                // So, we have to download it in the Apps package on external storage, then copy the files to dedicated directory
+                                File file_save_temp_path = new File( context.getExternalFilesDir( "preinstall" ).getAbsolutePath() + File.separator + fileName );
+                                Log.i( TAG, "APK Saved Path: " + file_save_temp_path.getAbsolutePath() );
+                                ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                                File path = new File( configurationReader.getPreinstallApksDirectoryPath(false) + File.separator + fileName );
+                                //File wallpaper = new File( path + File.separator + fileName );
+                                //UtilFile.copyFile( file_save_temp_path, wallpaper );
+                                file_save_temp_path.delete();
                                 break;
 
                             case DownloadManager.STATUS_PENDING:
@@ -330,8 +385,15 @@ public class DownloadPreinstallApks extends Service {
     }
 
     public void uninstallApk( String package_name ) {
-        Log.d( TAG, "UnInstalling apk : " + package_name );
-        String status = UtilShell.executeShellCommandWithOp( "pm uninstall " + package_name );
+        // The package_name may contain .apk in it, so process the file name first
+        String fileName = "";
+
+        if( package_name.contains( ".apk" ) ) {
+            fileName = package_name.substring(0, package_name.lastIndexOf(".apk"));
+        }
+
+        Log.d( TAG, "UnInstalling apk : " + fileName );
+        String status = UtilShell.executeShellCommandWithOp( "pm uninstall " + fileName );
         Log.i( TAG, "UnInstall status : " + status );
     }
 

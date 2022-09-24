@@ -36,6 +36,7 @@ import com.excel.datadownloader.secondgen.MainActivity;
 import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.Constants;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilFile;
 import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilShell;
@@ -113,7 +114,7 @@ public class DownloadOTAService extends Service {
         notificationManager.notify(0, notificationBuilder.build());
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_LOW);
             notificationManager.createNotificationChannel( channel );
 
             Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
@@ -248,7 +249,11 @@ public class DownloadOTAService extends Service {
         Request request = new Request( Uri.parse(UtilURL.getCMSRootPath() + file_path));
         // request.setNotificationVisibility( 2);
         request.setNotificationVisibility( NotificationCompat.VISIBILITY_PUBLIC );
-        request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
+        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+        File file_save_temp_path = new File( context.getExternalFilesDir( "firmware" ).getAbsolutePath() + File.separator + file_name );
+        file_save_temp_path.delete();
+        request.setDestinationUri( Uri.fromFile( file_save_temp_path ) );
 
         downloadReference = downloadManager.enqueue( request );
         validateOTATypeAndStartOTA();
@@ -357,7 +362,18 @@ public class DownloadOTAService extends Service {
 
                         downloading = false;
                         downloadReference = -1;
+
+                        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+                        File file_save_temp_path = new File( context.getExternalFilesDir( "firmware" ).getAbsolutePath() + File.separator + fileName );
+                        ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                        File path = new File( configurationReader.getFirmwareDirectoryPath() );
+                        File wallpaper = new File( path + File.separator + fileName );
+                        UtilFile.copyFile( file_save_temp_path, wallpaper );
+                        file_save_temp_path.delete();
+
                         verifyDownload();
+
                     }
                     else if( status == DownloadManager.STATUS_PENDING ){
                         Log.e( TAG, fileName + " download pending !" );

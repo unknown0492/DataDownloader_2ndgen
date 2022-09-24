@@ -61,10 +61,10 @@ public class Receiver extends BroadcastReceiver {
         }
 
         configurationReader = ConfigurationReader.reInstantiate();
-        Toast.makeText( context, intent.getAction(), Toast.LENGTH_SHORT ).show();
+        //Toast.makeText( context, intent.getAction(), Toast.LENGTH_SHORT ).show();
 
         //if( action.equals( "android.net.conn.CONNECTIVITY_CHANGE" ) || action.equals( "connectivity_changed" ) ){
-        if( action.equals( "connectivity_change" ) ){
+        if( action.equals( "connectivity_change" ) || action.equals( "android.net.conn.CONNECTIVITY_CHANGE" ) || action.equals( "connectivity_changed" ) ){
 
             // 1. First time in order to receive broadcasts, the app should be started at least once
             startDataDownloader( context );
@@ -141,12 +141,15 @@ public class Receiver extends BroadcastReceiver {
         }
     }
 
-    private void getTvChannelsFile(Context context) {
+    private void getTvChannelsFile( Context context ) {
         Intent in = new Intent( context, DownloadTvChannelsService.class );
+        Log.i( TAG, "inside getTvChannelsFile()" );
         if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
+            Log.i( TAG, "1" );
             context.startForegroundService( in );
         }
         else{
+            Log.i( TAG, "2" );
             context.startService( in );
         }
     }
@@ -163,7 +166,7 @@ public class Receiver extends BroadcastReceiver {
     }
 
 
-    private void getOTAInfo(Context context ) {
+    private void getOTAInfo( Context context ) {
         Intent in = new Intent( context, DownloadOTAService.class );
         //ContextCompat.startForegroundService( context, in );
         if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){

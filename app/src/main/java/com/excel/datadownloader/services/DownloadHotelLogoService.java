@@ -25,6 +25,7 @@ import androidx.core.content.ContentResolverCompat;
 import com.excel.configuration.ConfigurationReader;
 import com.excel.datadownloader.secondgen.R;
 import com.excel.excelclasslibrary.RetryCounter;
+import com.excel.excelclasslibrary.UtilFile;
 import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilNetwork;
 import com.excel.excelclasslibrary.UtilURL;
@@ -83,10 +84,12 @@ public class DownloadHotelLogoService extends Service {
         notificationManager.notify(0, notificationBuilder.build());
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_LOW);
             notificationManager.createNotificationChannel( channel );
 
             Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
+            /*notification.defaults = 0;
+            notification.sound = null;*/
             startForeground(1, notification);
         }
         else {
@@ -212,7 +215,11 @@ public class DownloadHotelLogoService extends Service {
         DownloadManager.Request request = new DownloadManager.Request( uri );
         request.setNotificationVisibility( DownloadManager.Request.VISIBILITY_HIDDEN );
         //request.setDestinationInExternalFilesDir( context, getExternalFilesDir( "Launcher" ).getAbsolutePath(), file_name );
-        request.setDestinationUri( Uri.fromFile( new File( file_save_path ) ) );
+        // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+        // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+        File file_save_temp_path = new File( context.getExternalFilesDir( "hotel_logo" ).getAbsolutePath() + File.separator + file_name );
+        file_save_temp_path.delete();
+        request.setDestinationUri( Uri.fromFile( file_save_temp_path ) );
         downloadReference = downloadManager.enqueue( request );
     }
 
@@ -241,6 +248,7 @@ public class DownloadHotelLogoService extends Service {
                         File savedFile = new File( Uri.parse( downloadedFileURI ).getPath() );
                         String savedFilePath = savedFile.getAbsolutePath();//cursor.getString( cursor.getColumnIndex( DownloadManager.COLUMN_LOCAL_FILENAME ) );
                         savedFilePath = savedFilePath.substring( savedFilePath.lastIndexOf( "/" ) + 1, savedFilePath.length() );
+                        String fileName = savedFilePath.substring( savedFilePath.lastIndexOf("/" ) + 1 );
 
                         switch( status ){
                             case DownloadManager.STATUS_SUCCESSFUL:
@@ -251,6 +259,15 @@ public class DownloadHotelLogoService extends Service {
                                 if( receiverDownloadComplete != null ) {
                                     unregisterReceiver(receiverDownloadComplete);
                                     receiverDownloadComplete = null;
+
+                                    // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                                    // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+                                    File file_save_temp_path = new File( context.getExternalFilesDir( "hotel_logo" ).getAbsolutePath() + File.separator + fileName );
+                                    ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                                    File path = new File( configurationReader.getHotelLogoDirectoryPath() );
+                                    File wallpaper = new File( path + File.separator + fileName );
+                                    UtilFile.copyFile( file_save_temp_path, wallpaper );
+                                    file_save_temp_path.delete();
                                 }
                                 break;
                             case DownloadManager.STATUS_FAILED:

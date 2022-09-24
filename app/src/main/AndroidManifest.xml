@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+
+    <permission android:name="android.net.conn.CONNECTIVITY_CHANGE" />
 
     <application
         android:allowBackup="true"
@@ -21,7 +24,8 @@
         android:supportsRtl="true"
         android:theme="@style/TransparentTheme"
         tools:replace="android:theme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true">
 
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -34,6 +38,13 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="connectivity_change" />
+                <action android:name="download_preinstall_apps" />
+                <action android:name="get_wallpapers" />
+                <action android:name="get_hotel_logo" />
+                <action android:name="get_tv_channels_file" />
+                <action android:name="get_ota_info" />
+                <action android:name="run_ota_upgrade" />
+                <action android:name="postpone_ota_upgrade" />
             </intent-filter>
         </receiver>
 
@@ -42,6 +53,7 @@
         <service android:name="com.excel.datadownloader.services.DownloadOTAService" />
         <service android:name="com.excel.datadownloader.services.DownloadPreinstallApks" />
         <service android:name="com.excel.datadownloader.services.DownloadTvChannelsService" />
+
     </application>
 
 </manifest>
