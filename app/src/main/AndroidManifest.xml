@@ -15,7 +15,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.net.conn.CONNECTIVITY_CHANGE" />
 
-    <permission android:name="android.net.conn.CONNECTIVITY_CHANGE" />
 
     <application
         android:allowBackup="true"
@@ -38,6 +37,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="connectivity_change" />
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
                 <action android:name="download_preinstall_apps" />
                 <action android:name="get_wallpapers" />
                 <action android:name="get_hotel_logo" />

@@ -1,0 +1,34 @@
+[
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/layout_activity_otadownloading.xml.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/layout/activity_otadownloading.xml"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/layout_activity_main.xml.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/drawable_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/drawable/ic_launcher.png"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.excel.datadownloader.secondgen.app-merged_res-20:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.excel.datadownloader.secondgen.app-main-21:/mipmap-mdpi/ic_launcher.png"
+    }
+]

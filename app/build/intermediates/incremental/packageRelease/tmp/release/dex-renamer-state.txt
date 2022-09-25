@@ -1,0 +1,4 @@
+#Sun Sep 25 17:08:46 IST 2022
+base.0=D\:\\OneDrive\\Programming\\Workspaces\\android\\excel\\appstv\\DataDownloader\\DataDownloader_2ndgen\\app\\build\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

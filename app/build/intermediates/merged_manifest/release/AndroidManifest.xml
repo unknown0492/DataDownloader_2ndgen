@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.excel.datadownloader.secondgen"
+    android:versionCode="5"
+    android:versionName="4.0.2" >
+
+    <uses-sdk
+        android:minSdkVersion="19"
+        android:targetSdkVersion="29" />
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+
+    <application
+        android:allowBackup="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+        android:debuggable="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:supportsRtl="true"
+        android:testOnly="true"
+        android:theme="@style/TransparentTheme"
+        android:usesCleartextTraffic="true" >
+        <activity android:name="com.excel.datadownloader.secondgen.MainActivity" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="com.excel.datadownloader.secondgen.Receiver"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="connectivity_change" />
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+                <action android:name="download_preinstall_apps" />
+                <action android:name="get_wallpapers" />
+                <action android:name="get_hotel_logo" />
+                <action android:name="get_tv_channels_file" />
+                <action android:name="get_ota_info" />
+                <action android:name="run_ota_upgrade" />
+                <action android:name="postpone_ota_upgrade" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name="com.excel.datadownloader.services.DownloadWallpaperService" />
+        <service android:name="com.excel.datadownloader.services.DownloadHotelLogoService" />
+        <service android:name="com.excel.datadownloader.services.DownloadOTAService" />
+        <service android:name="com.excel.datadownloader.services.DownloadPreinstallApks" />
+        <service android:name="com.excel.datadownloader.services.DownloadTvChannelsService" />
+    </application>
+
+</manifest>
