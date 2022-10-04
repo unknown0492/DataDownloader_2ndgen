@@ -45,6 +45,7 @@
                 <action android:name="get_ota_info" />
                 <action android:name="run_ota_upgrade" />
                 <action android:name="postpone_ota_upgrade" />
+                <action android:name="execute_scripts_from_db" />
             </intent-filter>
         </receiver>
 
@@ -53,6 +54,7 @@
         <service android:name="com.excel.datadownloader.services.DownloadOTAService" />
         <service android:name="com.excel.datadownloader.services.DownloadPreinstallApks" />
         <service android:name="com.excel.datadownloader.services.DownloadTvChannelsService" />
+        <service android:name="com.excel.datadownloader.services.ExecuteScriptsFromDatabase" />
 
     </application>
 

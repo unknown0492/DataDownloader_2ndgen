@@ -22,6 +22,7 @@ import com.excel.datadownloader.services.DownloadOTAService;
 import com.excel.datadownloader.services.DownloadPreinstallApks;
 import com.excel.datadownloader.services.DownloadTvChannelsService;
 import com.excel.datadownloader.services.DownloadWallpaperService;
+import com.excel.datadownloader.services.ExecuteScriptsFromDatabase;
 import com.excel.excelclasslibrary.UtilMisc;
 import com.excel.excelclasslibrary.UtilSharedPreferences;
 import com.excel.excelclasslibrary.UtilShell;
@@ -46,19 +47,7 @@ public class Receiver extends BroadcastReceiver {
         String action = intent.getAction();
         Log.d( TAG, "action : " + action );
 
-        spfs = (SharedPreferences) UtilSharedPreferences.createSharedPreference( context, PERMISSION_SPFS );
-        String is_permission_granted = UtilSharedPreferences.getSharedPreference( spfs, IS_PERMISSION_GRANTED, PERMISSION_GRANTED_NO ).toString().trim();
-        Log.d( TAG, "Permission granted : "+is_permission_granted );
-
-        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
-            if( is_permission_granted.equals( "yes" ) ){
-                Log.d( TAG, "All permissions have been granted, just proceed !" );
-            }
-            else{
-                startDataDownloader( context );
-                return;
-            }
-        }
+        startDataDownloader( context );
 
         configurationReader = ConfigurationReader.reInstantiate();
         //Toast.makeText( context, intent.getAction(), Toast.LENGTH_SHORT ).show();
@@ -87,6 +76,9 @@ public class Receiver extends BroadcastReceiver {
                 UtilMisc.sendExplicitInternalBroadcast( context, "get_ota_info", Receiver.class );
                 // context.sendBroadcast( new Intent("get_ota_info" ) );
 
+                // 4. Fetch the scripts from the Database
+                UtilMisc.sendExplicitInternalBroadcast( context, "execute_scripts_from_db", Receiver.class );
+
                 setConnectivityBroadcastFired( true );
             }
 
@@ -112,6 +104,9 @@ public class Receiver extends BroadcastReceiver {
         else if( action.equals( "postpone_ota_upgrade" ) ){
             postponeUpgrade( context );
         }
+        else if( action.equals( "execute_scripts_from_db" ) ){
+            executeScriptsFromDatabase( context );
+        }
     }
 
     private void startDataDownloader( Context context ){
@@ -123,58 +118,35 @@ public class Receiver extends BroadcastReceiver {
 
     private void getWallpapers( Context context ){
         Intent in = new Intent( context, DownloadWallpaperService.class );
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
-            context.startForegroundService( in );
-        }
-        else{
-            context.startService( in );
-        }
+        context.startService( in );
     }
 
     private void getHotelLogo( Context context ){
         Intent in = new Intent( context, DownloadHotelLogoService.class );
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
-            context.startForegroundService( in );
-        }
-        else{
-            context.startService( in );
-        }
+        context.startService( in );
+    }
+
+    private void executeScriptsFromDatabase( Context context ){
+        Intent in = new Intent( context, ExecuteScriptsFromDatabase.class );
+        context.startService( in );
     }
 
     private void getTvChannelsFile( Context context ) {
         Intent in = new Intent( context, DownloadTvChannelsService.class );
-        Log.i( TAG, "inside getTvChannelsFile()" );
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
-            Log.i( TAG, "1" );
-            context.startForegroundService( in );
-        }
-        else{
-            Log.i( TAG, "2" );
-            context.startService( in );
-        }
+        context.startService( in );
+
     }
 
     private void downloadPreinstallApks( Context context, Intent intent ) {
         Intent in = new Intent( context, DownloadPreinstallApks.class );
-        in.putExtra("json", intent.getStringExtra("json" ) );
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
-            context.startForegroundService( in );
-        }
-        else{
-            context.startService( in );
-        }
+        in.putExtra( "json", intent.getStringExtra( "json" ) );
+        context.startService( in );
     }
 
 
     private void getOTAInfo( Context context ) {
         Intent in = new Intent( context, DownloadOTAService.class );
-        //ContextCompat.startForegroundService( context, in );
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ){
-            context.startForegroundService( in );
-        }
-        else{
-            context.startService( in );
-        }
+        context.startService( in );
     }
 
     private void runOTAUpgrade(Context context) {

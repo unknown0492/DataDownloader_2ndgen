@@ -77,53 +77,6 @@ public class DownloadOTAService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
-        /*
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT);
-
-        NotificationCompat.Builder notificationBuilder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
-            NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, TAG, NotificationManager.IMPORTANCE_DEFAULT);
-            notificationChannel.enableVibration(true);
-            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(notificationChannel);
-        } else {
-            notificationBuilder =  new NotificationCompat.Builder(this);
-        }
-
-        notificationBuilder
-//                .setContentTitle(notification.getTitle())
-                .setContentText(String.format("R.string.workfield_driver_refuse"))
-                // .setDefaults(DEFAULT_SOUND | DEFAULT_VIBRATE)
-                .setAutoCancel(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContentIntent(pendingIntent)
-                .setLargeIcon(icon)
-                .setColor(Color.RED)
-                .setSmallIcon(R.mipmap.ic_launcher);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(0, notificationBuilder.build());*/
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationCompat.Builder notificationBuilder;
-        notificationBuilder = new NotificationCompat.Builder(this, "test");
-        notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
-        notificationManager.notify(0, notificationBuilder.build());
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel( "test",TAG, NotificationManager.IMPORTANCE_LOW);
-            notificationManager.createNotificationChannel( channel );
-
-            Notification notification = new Notification.Builder(getApplicationContext(),"test").build();
-            startForeground(1, notification);
-        }
-        else {
-
-            // startForeground(1, notification);
-        }
     }
 
     public int onStartCommand(Intent intent, int flags, int startId ){

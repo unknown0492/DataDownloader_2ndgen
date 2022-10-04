@@ -75,24 +75,6 @@ public class DownloadPreinstallApks extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationCompat.Builder notificationBuilder;
-        notificationBuilder = new NotificationCompat.Builder(this, "test" );
-        notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
-        notificationManager.notify(0, notificationBuilder.build());
-
-        if ( android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ) {
-            NotificationChannel channel = new NotificationChannel( "test", TAG, NotificationManager.IMPORTANCE_LOW );
-            notificationManager.createNotificationChannel( channel );
-
-            Notification notification = new Notification.Builder( getApplicationContext(),"test" ).build();
-            startForeground( 1, notification );
-        }
-        else{
-            // startForeground(1, notification);
-        }
     }
 
     private void downloadPreinstallApks() {
@@ -348,7 +330,7 @@ public class DownloadPreinstallApks extends Service {
                                 File file_save_temp_path = new File( context.getExternalFilesDir( "preinstall" ).getAbsolutePath() + File.separator + fileName );
                                 Log.i( TAG, "APK Saved Path: " + file_save_temp_path.getAbsolutePath() );
                                 ConfigurationReader configurationReader = ConfigurationReader.getInstance();
-                                File path = new File( configurationReader.getPreinstallApksDirectoryPath(false) + File.separator + fileName );
+                                //File path = new File( configurationReader.getPreinstallApksDirectoryPath(false) + File.separator + fileName );
                                 //File wallpaper = new File( path + File.separator + fileName );
                                 //UtilFile.copyFile( file_save_temp_path, wallpaper );
                                 file_save_temp_path.delete();

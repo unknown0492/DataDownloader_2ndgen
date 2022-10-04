@@ -25,8 +25,8 @@ android {
         applicationId "com.excel.datadownloader.secondgen"
         minSdkVersion 19
         targetSdkVersion 29
-        versionCode 5
-        versionName "4.0.2"
+        versionCode 7
+        versionName "4.0.4"
         project.ext.set("archivesBaseName", "0-DataDownloader_2ndGen_v" + defaultConfig.versionName);
     }
     buildTypes {

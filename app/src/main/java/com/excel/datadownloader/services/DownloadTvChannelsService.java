@@ -68,24 +68,6 @@ public class DownloadTvChannelsService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher );
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService( Context.NOTIFICATION_SERVICE );
-        NotificationCompat.Builder notificationBuilder;
-        notificationBuilder = new NotificationCompat.Builder(this, "test" );
-        notificationBuilder.setSmallIcon( R.drawable.ic_launcher );
-        notificationManager.notify(0, notificationBuilder.build() );
-
-        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
-            NotificationChannel channel = new NotificationChannel("test", TAG, NotificationManager.IMPORTANCE_LOW );
-            notificationManager.createNotificationChannel( channel );
-
-            Notification notification = new Notification.Builder( getApplicationContext(), "test" ).build();
-            startForeground(1, notification );
-        }
-        else {
-            // startForeground(1, notification);
-        }
     }
 
     @Override
@@ -250,18 +232,22 @@ public class DownloadTvChannelsService extends Service {
 
                                 unregisterReceiver( receiverDownloadComplete );
                                 receiverDownloadComplete = null;
+                            }
+                            // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
+                            // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
+                            File file_save_temp_path = new File( context.getExternalFilesDir( "tv_channels" ).getAbsolutePath() + File.separator + fileName );
+                            ConfigurationReader configurationReader = ConfigurationReader.getInstance();
+                            Log.i( TAG, "file_save_temp_path: " + file_save_temp_path.getAbsolutePath() );
 
-                                // The below changes have been due to Android 10, as the DownloadManager cannot download file in custom directory
-                                // So, we have to download it in the Apps packge on external storage, then copy the files to dedicated directory
-                                File file_save_temp_path = new File( context.getExternalFilesDir( "tv_channels" ).getAbsolutePath() + File.separator + fileName );
-                                ConfigurationReader configurationReader = ConfigurationReader.getInstance();
-                                Log.i( TAG, "file_save_temp_path: " + file_save_temp_path.getAbsolutePath() );
+                            File path = new File( ConfigurationReader.getInstance().getTvChannelsDirectoryPath() );
+                            File tv_channels = new File( path + File.separator + fileName );
+                            Log.i( TAG, "tv_channels: " + tv_channels.getAbsolutePath() );
 
-                                File path = new File( ConfigurationReader.getInstance().getTvChannelsDirectoryPath() );
-                                File tv_channels = new File( path + File.separator + fileName );
-                                Log.i( TAG, "tv_channels: " + tv_channels.getAbsolutePath() );
-
-                                UtilFile.copyFile( file_save_temp_path, tv_channels );
+                            UtilFile.copyFile( file_save_temp_path, tv_channels );
+                            String md5Old = UtilFile.getFileMd5( file_save_temp_path );
+                            String md5New = UtilFile.getFileMd5( tv_channels );
+                            if( md5Old.equals( md5New ) ) {
+                                Log.i( TAG, "MD5 matched for tv list, deleting the temp tv_channels.zip file from /mnt/sdcard/Android/data directory" );
                                 file_save_temp_path.delete();
                             }
                             break;
